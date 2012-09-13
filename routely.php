@@ -85,7 +85,6 @@ class Routely
             }
             $options = $this->build_options($route);
             Route::$method($name.$route['route'], $options);
-            print_r("Route::".$method."('".$name.$route["route"]."',". print_r($options).")");
         }
 	}
 
