@@ -18,6 +18,9 @@ class Routely
     protected $name = '';
     protected $singular = '';
 
+    protected $parent = '';
+    protected $parent_singular = '';
+
     protected $template = array(
         array(
             'method' => 'get',
@@ -25,6 +28,12 @@ class Routely
             'as' => ':singular_edit',
             'uses' => ':name@edit',
         ),
+        array(
+        	'method' => 'get',
+            'route' => '/(:any)/delete',
+            'as' => ':singular_delete',
+            'uses' => ':name@delete',
+       	),
         array(
             'method' => 'get',
             'route' => '/add',
@@ -35,7 +44,7 @@ class Routely
             'method' => 'get',
             'route' => '/(:any)',
             'as' => ':singular',
-            'uses' => ':name@view',
+            'uses' => ':name@item',
         ),
         array(
             'method' => 'get',
@@ -46,17 +55,17 @@ class Routely
         array(
             'method' => 'post',
             'route' => '',
-            'uses' => ':name@create',
+            'uses' => ':name@item',
         ),
         array(
             'method' => 'put',
             'route' => '/(:any)',
-            'uses' => ':name@update',
+            'uses' => ':name@item',
         ),
         array(
             'method' => 'delete',
             'route' => '/(:any)',
-            'uses' => ':name@destroy',
+            'uses' => ':name@item',
         ),
     );
 
@@ -71,21 +80,50 @@ class Routely
      */
     public function __construct($name, $template = array())
 	{
-        $this->name = $name;
-        $this->singular = Str::singular($name);
+        $this->parent = '';
+        $this->parent_singular = '';
+        $prefix = '';
 
+        // Use the custom template if its been provided
         if ( ! empty($template)) {
             $this->template = $template;
         }
 
+        // We allow the name to be set in a sub-folder
+        // so that restful routes can be created for x-to-many relationships
+        $pieces = explode('.', $name);
+        if ( ! empty($pieces[1])) {
+            $this->parent = $pieces[0];
+            $this->parent_singular = Str::singular($this->parent);
+            $prefix =  $this->parent . '/(:any?)/';
+        }
+
+        // If there isn't a second piece, then just use the name
+        $this->name = (empty($pieces[1])) ? $name : $pieces[1];
+        $this->singular = Str::singular($this->name);
+
+        // Create each route in the template
         foreach($this->template as $route) {
             $method = strtolower(($route['method']));
             if ( ! in_array($method, $this->valid_methods)) {
                 throw new \Exception('Invalid method specified:' . $method);
             }
             $options = $this->build_options($route);
-            Route::$method($name.$route['route'], $options);
+
+            Route::$method($prefix.$this->name.$route['route'], $options);
         }
+	}
+
+	/**
+	 * Static method to create a new set of routes
+	 *
+	 * @param  string $name The plural route name
+	 * @param  array  $template Optional route template
+	 * @return void
+	 */
+	public static function make($name, $template = array())
+	{
+	    new Routely($name, $template);
 	}
 
     /**
@@ -98,10 +136,12 @@ class Routely
     {
         $options = array();
         if ( ! empty($route['as'])) {
-            $options['as'] = $this->replace_tags($route['as']);
+            $prefix = (empty($this->parent_singular)) ? '' : $this->parent_singular . '_';
+            $options['as'] = $prefix . $this->replace_tags($route['as']);
         }
         if ( ! empty($route['uses'])) {
-            $options['uses'] = $this->replace_tags($route['uses']);
+            $prefix = (empty($this->parent)) ? '' : $this->parent . '.';
+            $options['uses'] = $prefix . $this->replace_tags($route['uses']);
         }
         return $options;
     }
