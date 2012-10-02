@@ -33,6 +33,9 @@ Bundle::start('routely');
 
 // Create a new bunch of routes for the 'books' resource
 new Routely('books');
+
+// Or use the static method
+Routely::make('books');
 ```
 
 This will automatically create a whole bunch of restful routes for you as follows:
@@ -50,7 +53,7 @@ Route::delete('books/(:any)', array('uses' => 'books@item');
 ## Nested controllers
 If you have nested controllers, then Routely can handle that too.
 ```php
-new Routely('books.comments');
+Routely::make('books.comments');
 
 Route::get('books/(:any)/comments/(:any)/edit', array('as' => 'book_comment_edit', 'uses' => 'books.comments@edit');
 Route::get('books/(:any)/comments/(:any)/delete', array('as' => 'book_comment_delete', 'uses' => 'books.comments@delete');
